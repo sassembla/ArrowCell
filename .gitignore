@@ -1,0 +1,7 @@
+
+Library/*
+.vscode/settings.json
+ArrowCell.sln
+Assembly-CSharp.csproj
+Temp/*
+obj/*

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using D = System.Diagnostics;
 using UnityEngine;
 
 /**
@@ -12,7 +13,7 @@ using UnityEngine;
 
 	コンポーネント間メッセージング
 		・起点から自分以外の下位にあるGameObjectのコンポーネントを探し、返す
-		・起点ベースのキャッシュを可能にする
+		・対象ベースのキャッシュを可能にする
 
 	Editor機構
 		・Editorで、特定の名前をコード上から指定しているArrowSell使用箇所を探す(コード -> AST -> という感じか。なんかDLLから出せそう。)
@@ -38,6 +39,7 @@ namespace ArrowCellCore {
 			gameObject名 x 型でコンポーネントをキャッシュしておいて返す。
 		 */
 		public static void GetRemoteComponent<T> (this GameObject obj, string remoteGameObjectName, Action<T> loaded) where T : Component {
+			
 			var key = remoteGameObjectName + "_" + typeof(T);
 			if (cacheDict.ContainsKey(key) && cacheDict[key] != null) {
 				loaded(cacheDict[key] as T);
@@ -46,32 +48,19 @@ namespace ArrowCellCore {
 
 			// not cached.
 
-			var targetChildComponent = FindChildRecursive<T>(obj.transform, remoteGameObjectName);
-			if (targetChildComponent != null) {
-				cacheDict[key] = targetChildComponent;
+			var targetChildComponents = obj.GetComponentsInChildren<T>();
+			foreach (var targetChildComponenta in targetChildComponents) {
+				if (targetChildComponenta.gameObject.name == remoteGameObjectName) {
+					cacheDict[key] = targetChildComponenta;
 
-				loaded(cacheDict[key] as T);
-				return;
+					loaded(cacheDict[key] as T);
+					return;
+				}
 			}
 
 			// not found.
 
 			Debug.LogError("failed to found component:" + typeof(T) + " from gameObject:" + remoteGameObjectName);
-		}
-
-		private static T FindChildRecursive<T> (Transform parentTrans, string remoteGameObjectName) where T : Component {
-			foreach (Transform t in parentTrans) {
-				if (t.gameObject.name == remoteGameObjectName) {
-					return t.gameObject.GetComponent<T>() as T;
-				}
-
-				var childResult = FindChildRecursive<T>(t, remoteGameObjectName);
-				if (childResult != null) {
-					return childResult;
-				}
-			}
-
-			return null;
 		}
 	}
 }
